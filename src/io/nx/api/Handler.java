@@ -6,6 +6,6 @@ import java.nio.channels.SelectionKey;
 public interface Handler {
 	void open(SelectionKey key);
 	void read(SelectionKey key);
-	boolean write(SelectionKey key, ByteBuffer buffer);
+	void write(SelectionKey key, ByteBuffer buffer);
 	void close(SelectionKey key);
 }

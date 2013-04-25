@@ -4,14 +4,23 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import io.nx.api.Handler;
+import io.nx.core.Processor;
 
 
 public abstract class AbstractHandler implements Handler {
 	
 	private ByteBuffer inputBuffer = ByteBuffer.allocate(4096);
 	
+	private BlockingQueue<ByteBuffer> outQ = new LinkedBlockingQueue<ByteBuffer>();
+	
+	private Lock lock = new ReentrantLock();
 	
 	public abstract void process(SelectionKey key, ByteBuffer buffer);
 
@@ -39,17 +48,57 @@ public abstract class AbstractHandler implements Handler {
 			this.close(key);
 		}
 	}
-
-	@Override
-	public boolean write(SelectionKey key, ByteBuffer buffer) {
+	
+	private void writeOut(SelectionKey key) {
+		for (;;) {
+			ByteBuffer buffer = this.outQ.peek();
+			if (buffer == null) {
+				notifyProcessor(key, SelectionKey.OP_READ);
+				break;
+			}
+			if (!this.write0(key, buffer)) {
+				break;
+			}
+			this.outQ.poll();
+		}
+	}
+	
+	private void notifyProcessor(SelectionKey key, int ops) {
 		try {
-			buffer.flip();
-			int num = ((SocketChannel)key.channel()).write(buffer);
+			key.interestOps(ops);
+			key.selector().wakeup();
+		} catch (Exception e) {
+			e.printStackTrace();
+			this.close(key);
+		}
+	}
+	
+
+	private boolean write0(SelectionKey key, ByteBuffer buffer) {
+		try {
+			((SocketChannel)key.channel()).write(buffer);
 		} catch (IOException e) {
 			e.printStackTrace();
 			this.close(key);
 		}
 		return !buffer.hasRemaining();
+	}
+	
+	@Override
+	public void write(SelectionKey key, ByteBuffer buffer) {
+		if (buffer != null) {
+			buffer.flip();
+			this.outQ.add(buffer);
+			try {
+				if (lock.tryLock()) {
+					notifyProcessor(key, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+				}
+			} finally {
+				lock.unlock();
+			}
+		} else {
+			writeOut(key);
+		}
 	}
 
 }

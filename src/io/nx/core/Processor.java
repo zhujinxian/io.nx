@@ -3,6 +3,7 @@ package io.nx.core;
 import io.nx.api.Handler;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -63,16 +64,22 @@ private static final int TIME_OUT = 100;
 				if (count == 0) {
 					continue;
 				}
-				System.out.println("select " + count + "/" + this.selector.keys().size() );
+//				System.out.println("select " + count + "/" + this.selector.keys().size() );
 				Set<SelectionKey> ready = selector.selectedKeys();
 				Iterator<SelectionKey> iterator = ready.iterator();
 				while (iterator.hasNext()) {
 					SelectionKey key = (SelectionKey) iterator.next();
 					iterator.remove();
 					Handler handler = this.map.get(key);
-					if (handler != null && key.isReadable()) {
-						handler.read(key);
-					} 
+					if (handler != null && key.isValid()) {
+						if (key.isReadable()) {
+							handler.read(key);
+						}
+						if (key.isWritable()) {
+							handler.write(key, null);
+						}
+						
+					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -113,9 +120,9 @@ private static final int TIME_OUT = 100;
 			}
 		}		
 	}
+	
 
 	public void unBind(int port) {
 		this.unbindQ.add(port);
 	}
-	
 }
