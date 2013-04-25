@@ -1,72 +1,95 @@
 package io.nx.core;
 
+import io.nx.api.HandlerFactory;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.AbstractMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.Map.Entry;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
-import io.nx.api.ChannelHandler;
-import io.nx.api.ChannelHandlerFactory;
-import io.nx.api.Server;
+public class ServerAcceptor implements Runnable {
 
-public class ServerAcceptor implements Server, Runnable {
-	
 	private static final int TIME_OUT = 100;
-	private static final int DEFAULT_INPUT_BUFFER_SIZE = 4096;
 	
-	private Selector selector;
-	private int count;
 	private boolean stop;
+	private Selector selector;
 	private List<Processor> processors;
+	private ConcurrentHashMap<SelectionKey, HandlerFactory> factoryMap = new ConcurrentHashMap<SelectionKey, HandlerFactory>();
 	
-	private int inputBufferSize = DEFAULT_INPUT_BUFFER_SIZE;
+	private BlockingQueue<Integer> unbindQ = new LinkedBlockingQueue<Integer>();
+	private BlockingQueue<Entry<Integer, HandlerFactory>> bindQ = new LinkedBlockingQueue<Entry<Integer, HandlerFactory>>();
 	
-	private ChannelHandlerFactory factory;
-	
-	public ServerAcceptor() {
+	private int count;
+		
+	public ServerAcceptor(List<Processor> processors) {
 		try {
 			this.selector = Selector.open();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		this.processors = processors;
 	}
-
-	@Override
-	public void bind(int port, ChannelHandlerFactory factory) {
+	
+	public void bind(int port, HandlerFactory factory) {
+		Entry<Integer, HandlerFactory> entry = new AbstractMap.SimpleEntry<Integer, HandlerFactory>(port, factory);
+		this.bindQ.add(entry);
+	}
+	public void unBind(int port) {
+		this.unbindQ.add(port);
+	}
+	
+	
+	private void bindImp(int port, HandlerFactory factory) {
 		try {
 			ServerSocketChannel server = ServerSocketChannel.open();
 			InetSocketAddress isa = new InetSocketAddress(port);
 			server.socket().bind(isa);
 			server.configureBlocking(false);
-			server.register(this.selector, SelectionKey.OP_ACCEPT, 
-					new AcceptHandler(this, server));
+			SelectionKey key = server.register(this.selector, SelectionKey.OP_ACCEPT);
+			this.factoryMap.put(key, factory);
 		}catch(Exception e){
 			e.printStackTrace();
 		}
 	}
-
-	public void dispatch(SocketChannel socket) {
-		int num = this.processors.size();
-		int index = count % num;
-		count++;
-		Processor processor = this.processors.get(index);
-		AbstractHandler handler = (AbstractHandler)this.factory.getChannelHandler();
-		handler.setChannel(socket);
-		handler.setAcceptor(this);
-		handler.setProcessor(processor);
-		processor.register(socket, handler);
+	
+	
+	
+	private void unBindImp(int port) {
+		for (SelectionKey key : factoryMap.keySet()) {
+			ServerSocketChannel server = (ServerSocketChannel)key.channel();
+			if (server.socket().getLocalPort() == port) {
+				this.factoryMap.remove(key);
+				key.cancel();
+				try {
+					server.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				for (Processor pro : this.processors) {
+					pro.unBind(port);
+				}
+				break;
+			}
+		}
 	}
-
+	
+	
 	@Override
 	public void run() {
 		while (!stop) {
 			try {
+				processBindQ();
+				processUbindQ();
 				int count = this.selector.select(TIME_OUT);
 				if (count == 0) {
 					continue;
@@ -76,8 +99,7 @@ public class ServerAcceptor implements Server, Runnable {
 				while (iterator.hasNext()) {
 					SelectionKey key = (SelectionKey) iterator.next();
 					iterator.remove();
-					ChannelHandler handler = (ChannelHandler)key.attachment();
-					handler.execute();
+					acceptKey(key);
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -85,13 +107,56 @@ public class ServerAcceptor implements Server, Runnable {
 		}
 	}
 
-	@Override
-	public void setInputBufferSize(int size) {
-		this.inputBufferSize = size;
+
+	private void processUbindQ() {
+		for (;;) {
+			Integer port = this.unbindQ.poll();
+			if (port == null) {
+				break;
+			}
+			this.unBindImp(port);
+		}
 	}
-	
-	public ByteBuffer getBuffer() {
-		return ByteBuffer.allocate(inputBufferSize);
+
+	private void processBindQ() {
+		for (;;) {
+			Entry<Integer, HandlerFactory> entry = this.bindQ.poll();
+			if (entry == null) {
+				break;
+			}
+			this.bindImp(entry.getKey(), entry.getValue());
+		}
+	}
+
+	private void acceptKey(SelectionKey key) {
+		HandlerFactory factory = this.factoryMap.get(key);
+		if (factory == null) {
+			return;
+		}
+		try{
+			ServerSocketChannel server = (ServerSocketChannel)key.channel();
+			SocketChannel socket = (SocketChannel) server.accept();
+			if(socket == null){
+				return;
+			}
+			socket.configureBlocking(false);
+			if(!socket.finishConnect()){
+				socket.close();
+				return;
+			}
+			dispatch(socket, factory);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
+	private void dispatch(SocketChannel socket, HandlerFactory factory) {
+		int num = this.processors.size();
+		int index = count % num;
+		count++;
+		Processor processor = this.processors.get(index);
+		processor.register(socket, factory.getHandler());
+		
 	}
 
 }
