@@ -60,11 +60,12 @@ private static final int TIME_OUT = 100;
 				processRegQ();
 				long t = System.currentTimeMillis();
 				int count = this.selector.select(TIME_OUT);
-//				System.out.println(System.currentTimeMillis() - t);
 				if (count == 0) {
+					if (this.selector.selectedKeys().size() > 0) {
+						this.selector.selectedKeys().clear();
+					}
 					continue;
 				}
-//				System.out.println("select " + count + "/" + this.selector.keys().size() );
 				Set<SelectionKey> ready = selector.selectedKeys();
 				Iterator<SelectionKey> iterator = ready.iterator();
 				while (iterator.hasNext()) {

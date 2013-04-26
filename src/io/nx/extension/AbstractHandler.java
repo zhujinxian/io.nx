@@ -49,7 +49,7 @@ public abstract class AbstractHandler implements Handler {
 		}
 	}
 	
-	private void writeOut(SelectionKey key) {
+	private synchronized void writeOut(SelectionKey key) {
 		for (;;) {
 			ByteBuffer buffer = this.outQ.peek();
 			if (buffer == null) {
@@ -66,7 +66,6 @@ public abstract class AbstractHandler implements Handler {
 	private void notifyProcessor(SelectionKey key, int ops) {
 		try {
 			key.interestOps(ops);
-			key.selector().wakeup();
 		} catch (Exception e) {
 			e.printStackTrace();
 			this.close(key);

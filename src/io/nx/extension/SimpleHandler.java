@@ -15,8 +15,8 @@ public class SimpleHandler extends AbstractHandler {
 
 	@Override
 	public void open(SelectionKey key) {
-		SocketChannel socket = (SocketChannel)key.channel();
-		System.out.println("open socket: " + socket.socket().toString());
+//		SocketChannel socket = (SocketChannel)key.channel();
+//		System.out.println("open socket: " + socket.socket().toString());
 	}
 
 }
