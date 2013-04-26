@@ -1,8 +1,9 @@
 package io.nx.extension;
 
+import io.nx.api.AbstractHandler;
+
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
 
 public class SimpleHandler extends AbstractHandler {
 
@@ -15,8 +16,6 @@ public class SimpleHandler extends AbstractHandler {
 
 	@Override
 	public void open(SelectionKey key) {
-//		SocketChannel socket = (SocketChannel)key.channel();
-//		System.out.println("open socket: " + socket.socket().toString());
 	}
 
 }

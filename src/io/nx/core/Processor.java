@@ -1,30 +1,31 @@
 package io.nx.core;
 
-import io.nx.api.Handler;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class Processor implements Runnable{
+public class Processor implements Runnable, Reactor{
 private static final int TIME_OUT = 100;
 	
 	private Selector selector;
 	private boolean stop;
 	
 	private BlockingQueue<Integer> unbindQ = new LinkedBlockingQueue<Integer>();
-	private BlockingQueue<Entry<SocketChannel, Handler>> regQ = new LinkedBlockingQueue<Entry<SocketChannel, Handler>>();
+	private BlockingQueue<Entry<SocketChannel, ChannelHandler>> regQ = new LinkedBlockingQueue<Entry<SocketChannel, ChannelHandler>>();
+	private BlockingQueue<Entry<SelectionKey, ChannelHandler>> flushQ = new LinkedBlockingQueue<Entry<SelectionKey, ChannelHandler>>();
 	
-	private ConcurrentHashMap<SelectionKey, Handler> map = new ConcurrentHashMap<SelectionKey, Handler>();
+	private ConcurrentHashMap<SelectionKey, ChannelHandler> map = new ConcurrentHashMap<SelectionKey, ChannelHandler>();
 	
 	public Processor() {
 		try {
@@ -33,23 +34,22 @@ private static final int TIME_OUT = 100;
 			e.printStackTrace();
 		}
 	}
-	
-	public void register(SocketChannel socket, Handler handler) {
-		Entry<SocketChannel, Handler> entry = new AbstractMap.SimpleEntry<SocketChannel, Handler>(socket, handler);
+
+	public Selector getSelector() {
+		return selector;
+	}
+
+	public void register(SocketChannel socket, ChannelHandler handler) {
+		Entry<SocketChannel, ChannelHandler> entry = new AbstractMap.SimpleEntry<SocketChannel, ChannelHandler>(socket, handler);
 		this.regQ.add(entry);
 	}
 	
-	private void registerImp(Entry<SocketChannel, Handler> entry) {
-		SocketChannel socket = entry.getKey();
-		Handler handler = entry.getValue();
-		try{
-			socket.configureBlocking(false);
-			SelectionKey key = socket.register(this.selector, SelectionKey.OP_READ);
-			handler.open(key);
-			this.map.put(key, handler);
-		}catch(Exception e){
-			e.printStackTrace();
-		}
+	public void unBind(int port) {
+		this.unbindQ.add(port);
+	}
+
+	public void flush(SelectionKey key, ChannelHandler handler) {
+		this.flushQ.add(new AbstractMap.SimpleEntry<SelectionKey, ChannelHandler>(key, handler));
 	}
 
 	@Override
@@ -58,7 +58,7 @@ private static final int TIME_OUT = 100;
 			try {
 				processUbindQ();
 				processRegQ();
-				long t = System.currentTimeMillis();
+				processFlushQ();
 				int count = this.selector.select(TIME_OUT);
 				if (count == 0) {
 					if (this.selector.selectedKeys().size() > 0) {
@@ -71,15 +71,11 @@ private static final int TIME_OUT = 100;
 				while (iterator.hasNext()) {
 					SelectionKey key = (SelectionKey) iterator.next();
 					iterator.remove();
-					Handler handler = this.map.get(key);
+					ChannelHandler handler = this.map.get(key);
 					if (handler != null && key.isValid()) {
 						if (key.isReadable()) {
 							handler.read(key);
 						}
-						if (key.isWritable()) {
-							handler.write(key, null);
-						}
-						
 					}
 				}
 			} catch (Exception e) {
@@ -88,13 +84,41 @@ private static final int TIME_OUT = 100;
 		}
 	}
 
+	private void processFlushQ() {
+		List<Entry<SelectionKey, ChannelHandler>> flushList = new ArrayList<Entry<SelectionKey, ChannelHandler>>();
+		this.flushQ.drainTo(flushList);
+		for (Entry<SelectionKey, ChannelHandler> entry : flushList) {
+			fulshImp(entry);
+		}
+	}
+
+	private void fulshImp(Entry<SelectionKey, ChannelHandler> entry) {
+		SelectionKey key = entry.getKey();
+		ChannelHandler handler = entry.getValue();
+		handler.write(key, null);
+		
+	}
+
 	private void processRegQ() {
 		for (;;) {
-			Entry<SocketChannel, Handler> entry = this.regQ.poll();
+			Entry<SocketChannel, ChannelHandler> entry = this.regQ.poll();
 			if (entry == null) {
 				break;
 			}
 			registerImp(entry);
+		}
+	}
+	
+	private void registerImp(Entry<SocketChannel, ChannelHandler> entry) {
+		SocketChannel socket = entry.getKey();
+		ChannelHandler handler = entry.getValue();
+		try{
+			socket.configureBlocking(false);
+			SelectionKey key = socket.register(this.selector, SelectionKey.OP_READ);
+			handler.open(key);
+			this.map.put(key, handler);
+		}catch(Exception e){
+			e.printStackTrace();
 		}
 	}
 
@@ -120,10 +144,5 @@ private static final int TIME_OUT = 100;
 				}
 			}
 		}		
-	}
-	
-
-	public void unBind(int port) {
-		this.unbindQ.add(port);
 	}
 }

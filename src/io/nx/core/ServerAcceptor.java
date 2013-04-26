@@ -1,6 +1,5 @@
 package io.nx.core;
 
-import io.nx.api.HandlerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -24,10 +23,10 @@ public class ServerAcceptor implements Runnable {
 	private boolean stop;
 	private Selector selector;
 	private List<Processor> processors;
-	private ConcurrentHashMap<SelectionKey, HandlerFactory> factoryMap = new ConcurrentHashMap<SelectionKey, HandlerFactory>();
+	private ConcurrentHashMap<SelectionKey, ChannelHandlerFactory> factoryMap = new ConcurrentHashMap<SelectionKey, ChannelHandlerFactory>();
 	
 	private BlockingQueue<Integer> unbindQ = new LinkedBlockingQueue<Integer>();
-	private BlockingQueue<Entry<Integer, HandlerFactory>> bindQ = new LinkedBlockingQueue<Entry<Integer, HandlerFactory>>();
+	private BlockingQueue<Entry<Integer, ChannelHandlerFactory>> bindQ = new LinkedBlockingQueue<Entry<Integer, ChannelHandlerFactory>>();
 	
 	private int count;
 		
@@ -40,8 +39,8 @@ public class ServerAcceptor implements Runnable {
 		this.processors = processors;
 	}
 	
-	public void bind(int port, HandlerFactory factory) {
-		Entry<Integer, HandlerFactory> entry = new AbstractMap.SimpleEntry<Integer, HandlerFactory>(port, factory);
+	public void bind(int port, ChannelHandlerFactory factory) {
+		Entry<Integer, ChannelHandlerFactory> entry = new AbstractMap.SimpleEntry<Integer, ChannelHandlerFactory>(port, factory);
 		this.bindQ.add(entry);
 	}
 	public void unBind(int port) {
@@ -49,7 +48,7 @@ public class ServerAcceptor implements Runnable {
 	}
 	
 	
-	private void bindImp(int port, HandlerFactory factory) {
+	private void bindImp(int port, ChannelHandlerFactory factory) {
 		try {
 			ServerSocketChannel server = ServerSocketChannel.open();
 			InetSocketAddress isa = new InetSocketAddress(port);
@@ -120,7 +119,7 @@ public class ServerAcceptor implements Runnable {
 
 	private void processBindQ() {
 		for (;;) {
-			Entry<Integer, HandlerFactory> entry = this.bindQ.poll();
+			Entry<Integer, ChannelHandlerFactory> entry = this.bindQ.poll();
 			if (entry == null) {
 				break;
 			}
@@ -129,7 +128,7 @@ public class ServerAcceptor implements Runnable {
 	}
 
 	private void acceptKey(SelectionKey key) {
-		HandlerFactory factory = this.factoryMap.get(key);
+		ChannelHandlerFactory factory = this.factoryMap.get(key);
 		if (factory == null) {
 			return;
 		}
@@ -150,7 +149,7 @@ public class ServerAcceptor implements Runnable {
 		}
 	}
 
-	private void dispatch(SocketChannel socket, HandlerFactory factory) {
+	private void dispatch(SocketChannel socket, ChannelHandlerFactory factory) {
 		int num = this.processors.size();
 		int index = count % num;
 		count++;
