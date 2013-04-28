@@ -1,6 +1,6 @@
 package io.nx.core;
 
-import io.nx.api.AbstractHandler;
+import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Server;
 
 import java.nio.channels.Selector;
@@ -34,11 +34,6 @@ public class ServerBootstrap implements Server{
 		}
 		this.excutor.execute(this.acceptor);
 	}
-	
-	private void bind(int port, ChannelHandlerFactory factory) {
-		acceptor.bind(port, factory);
-		
-	}
 
 	@Override
 	public void unBind(int port) {
@@ -47,7 +42,7 @@ public class ServerBootstrap implements Server{
 	}
 
 	@Override
-	public void bind(int port, Class<? extends AbstractHandler> className) {
-		this.bind(port, new ChannelHandlerFactory(className));
+	public void bind(int port, ChannelHandlerFactory factory) {
+		acceptor.bind(port, factory);
 	}
 }

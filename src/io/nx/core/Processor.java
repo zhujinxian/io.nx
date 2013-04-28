@@ -1,7 +1,11 @@
 package io.nx.core;
 
 
+import io.nx.api.ChannelHandler;
+import io.nx.api.ChannelHandlerContext;
+
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -14,8 +18,10 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class Processor implements Runnable, Reactor{
+public class Processor implements Runnable {
 private static final int TIME_OUT = 100;
 	
 	private Selector selector;
@@ -23,9 +29,9 @@ private static final int TIME_OUT = 100;
 	
 	private BlockingQueue<Integer> unbindQ = new LinkedBlockingQueue<Integer>();
 	private BlockingQueue<Entry<SocketChannel, ChannelHandler>> regQ = new LinkedBlockingQueue<Entry<SocketChannel, ChannelHandler>>();
-	private BlockingQueue<Entry<SelectionKey, ChannelHandler>> flushQ = new LinkedBlockingQueue<Entry<SelectionKey, ChannelHandler>>();
+	private BlockingQueue<ChannelHandlerContext> flushQ = new LinkedBlockingQueue<ChannelHandlerContext>();
 	
-	private ConcurrentHashMap<SelectionKey, ChannelHandler> map = new ConcurrentHashMap<SelectionKey, ChannelHandler>();
+	private ConcurrentHashMap<SelectionKey, ChannelHandlerContext> map = new ConcurrentHashMap<SelectionKey, ChannelHandlerContext>();
 	
 	public Processor() {
 		try {
@@ -48,8 +54,8 @@ private static final int TIME_OUT = 100;
 		this.unbindQ.add(port);
 	}
 
-	public void flush(SelectionKey key, ChannelHandler handler) {
-		this.flushQ.add(new AbstractMap.SimpleEntry<SelectionKey, ChannelHandler>(key, handler));
+	public void flush(ChannelHandlerContext ctx) {
+		this.flushQ.add(ctx);
 	}
 
 	@Override
@@ -69,13 +75,16 @@ private static final int TIME_OUT = 100;
 				Set<SelectionKey> ready = selector.selectedKeys();
 				Iterator<SelectionKey> iterator = ready.iterator();
 				while (iterator.hasNext()) {
-					SelectionKey key = (SelectionKey) iterator.next();
+					SelectionKey key = iterator.next();
 					iterator.remove();
-					ChannelHandler handler = this.map.get(key);
-					if (handler != null && key.isValid()) {
-						if (key.isReadable()) {
-							handler.read(key);
-						}
+					try {
+						ChannelHandlerContext ctx = this.map.get(key);
+						ChannelHandler handler = ctx.getHandler();
+						handler.read(ctx);
+					} catch(Exception e) {
+						e.printStackTrace();
+						key.cancel();
+						key.channel().close();
 					}
 				}
 			} catch (Exception e) {
@@ -85,18 +94,15 @@ private static final int TIME_OUT = 100;
 	}
 
 	private void processFlushQ() {
-		List<Entry<SelectionKey, ChannelHandler>> flushList = new ArrayList<Entry<SelectionKey, ChannelHandler>>();
+		List<ChannelHandlerContext> flushList = new ArrayList<ChannelHandlerContext>();
 		this.flushQ.drainTo(flushList);
-		for (Entry<SelectionKey, ChannelHandler> entry : flushList) {
-			fulshImp(entry);
+		for (ChannelHandlerContext ctx : flushList) {
+			fulshImp(ctx);
 		}
 	}
 
-	private void fulshImp(Entry<SelectionKey, ChannelHandler> entry) {
-		SelectionKey key = entry.getKey();
-		ChannelHandler handler = entry.getValue();
-		handler.write(key, null);
-		
+	private void fulshImp(ChannelHandlerContext ctx) {
+		ctx.writeBytes(null);
 	}
 
 	private void processRegQ() {
@@ -115,8 +121,9 @@ private static final int TIME_OUT = 100;
 		try{
 			socket.configureBlocking(false);
 			SelectionKey key = socket.register(this.selector, SelectionKey.OP_READ);
-			handler.open(key);
-			this.map.put(key, handler);
+			ChannelHandlerContext ctx = new DefaultChannelHandlerContext(key, handler);
+			handler.open(ctx);
+			this.map.put(key, ctx);
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -144,5 +151,122 @@ private static final int TIME_OUT = 100;
 				}
 			}
 		}		
+	}
+	
+	
+	private class DefaultChannelHandlerContext implements ChannelHandlerContext {
+		
+		private Processor proc;
+		private ChannelHandler handler;
+		private SelectionKey key;
+		private ByteBuffer inputBuff = ByteBuffer.allocate(4096);
+		private BlockingQueue<ByteBuffer> outQ = new LinkedBlockingQueue<ByteBuffer>();
+		
+		private Lock lock = new ReentrantLock();
+		
+		
+
+		public DefaultChannelHandlerContext(SelectionKey key, ChannelHandler handler) {
+			this.handler = handler;
+			this.key = key;
+			this.proc = Processor.this;
+		}
+
+		@Override
+		public ByteBuffer getBuffer() {
+			return this.inputBuff;
+		}
+
+		@Override
+		public SelectionKey getKey() {
+			return this.key;
+		}
+
+		@Override
+		public void setBufferSize(int size) {
+			ByteBuffer buff = ByteBuffer.allocate(size);
+			buff.put(this.inputBuff);
+			this.inputBuff = buff;
+		}
+
+		@Override
+		public void writeBytes(byte[] data) {
+			if (data != null) {
+				ByteBuffer buffer = ByteBuffer.allocate(data.length);
+				buffer.put(data);
+				buffer.flip();
+				this.outQ.add(buffer);
+			}
+			this.flush();
+		}
+
+		@Override
+		public ChannelHandler getHandler() {
+			return this.handler;
+		}
+
+		@Override
+		public void read() {
+			try {
+				int count = this.getChannel().read(this.inputBuff);
+				if (count == -1) {
+					this.getHandler().close(this);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				this.getHandler().close(this);
+			}	
+		}
+		
+		@Override
+		public void attach(Object parameter) {
+			this.key.attach(parameter);
+		}
+
+		@Override
+		public Object attachment() {
+			return this.key.attachment();
+		}
+		
+		@Override
+		public SocketChannel getChannel() {
+			return ((SocketChannel)this.key.channel());
+		}
+		
+		
+		private void flush() {
+			if (lock.tryLock()) {
+				try {
+					for (;;) {
+						ByteBuffer buffer = this.outQ.peek();
+						if (buffer == null) {
+							return;
+						}
+						if (!this.write0(buffer)) {
+							this.proc.flush(this);
+							return;
+						}
+						this.outQ.poll();
+					}
+				} finally {
+					lock.unlock();
+				}
+				
+			} else {
+				this.proc.flush(this);
+			}
+		}
+		
+		private boolean write0(ByteBuffer buffer) {
+			try {
+				this.getChannel().write(buffer);
+			} catch (IOException e) {
+				e.printStackTrace();
+				this.getHandler().close(this);
+				return true;
+			}
+			return !buffer.hasRemaining();
+		}
+
 	}
 }
