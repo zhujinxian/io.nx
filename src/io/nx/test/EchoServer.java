@@ -4,13 +4,15 @@ import io.nx.api.ChannelHandler;
 import io.nx.api.ChannelHandlerContext;
 import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Server;
-import io.nx.core.ServerBootstrap;
+import io.nx.core.NodeBootstrap;
 import io.nx.core.extention.SimpleChannelHandler;
+
+import java.net.InetSocketAddress;
 
 public class EchoServer {
 	public static void main(String[] args) {
-		Server server = new ServerBootstrap();
-		server.bind(7894, new EchoHandlerFactory());
+		Server server = new NodeBootstrap();
+		server.bind(new InetSocketAddress(7894), new EchoHandlerFactory());
 	}
 }
 

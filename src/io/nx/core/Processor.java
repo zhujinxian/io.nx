@@ -5,6 +5,9 @@ import io.nx.api.ChannelHandler;
 import io.nx.api.ChannelHandlerContext;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -27,7 +30,7 @@ private static final int TIME_OUT = 100;
 	private Selector selector;
 	private boolean stop;
 	
-	private BlockingQueue<Integer> unbindQ = new LinkedBlockingQueue<Integer>();
+	private BlockingQueue<Entry<InetSocketAddress, Boolean>> unbindQ = new LinkedBlockingQueue<Entry<InetSocketAddress, Boolean>>();
 	private BlockingQueue<Entry<SocketChannel, ChannelHandler>> regQ = new LinkedBlockingQueue<Entry<SocketChannel, ChannelHandler>>();
 	private BlockingQueue<ChannelHandlerContext> flushQ = new LinkedBlockingQueue<ChannelHandlerContext>();
 	
@@ -50,8 +53,9 @@ private static final int TIME_OUT = 100;
 		this.regQ.add(entry);
 	}
 	
-	public void unBind(int port) {
-		this.unbindQ.add(port);
+	public void unBind(InetSocketAddress isa, boolean isLocal) {
+		Entry<InetSocketAddress, Boolean> entry = new AbstractMap.SimpleEntry<InetSocketAddress, Boolean>(isa, isLocal);
+		this.unbindQ.add(entry);
 	}
 
 	public void flush(ChannelHandlerContext ctx) {
@@ -131,18 +135,27 @@ private static final int TIME_OUT = 100;
 
 	private void processUbindQ() {
 		for (;;) {
-			Integer port = this.unbindQ.poll();
-			if (port == null) {
+			Entry<InetSocketAddress, Boolean> entry = this.unbindQ.poll();
+			if (entry == null) {
 				break;
 			}
-			this.unBindImp(port);
+			this.unBindImp(entry.getKey(), entry.getValue());
 		}		
 	}
 
-	private void unBindImp(Integer port) {
+	private void unBindImp(InetSocketAddress isa, boolean isLocal) {
 		for (SelectionKey key : this.selector.keys()) {
 			SocketChannel soc = (SocketChannel)key.channel();
-			if (soc.socket().getLocalPort() == port) {
+			InetAddress ia = null;
+			int port = 0;
+			if (isLocal) {
+				ia = soc.socket().getLocalAddress();
+				port = soc.socket().getLocalPort();
+			} else {
+				ia = soc.socket().getInetAddress();
+				port = soc.socket().getPort();
+			}
+			if (port == isa.getPort() && isa.getAddress().equals(ia)) {
 				key.cancel();
 				try {
 					soc.close();

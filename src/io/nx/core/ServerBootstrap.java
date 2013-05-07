@@ -3,6 +3,7 @@ package io.nx.core;
 import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Server;
 
+import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,13 +37,13 @@ public class ServerBootstrap implements Server{
 	}
 
 	@Override
-	public void unBind(int port) {
-		this.acceptor.unBind(port);
+	public void unBind(InetSocketAddress isa) {
+		this.acceptor.unBind(isa);
 		
 	}
 
 	@Override
-	public void bind(int port, ChannelHandlerFactory factory) {
-		acceptor.bind(port, factory);
+	public void bind(InetSocketAddress isa, ChannelHandlerFactory factory) {
+		acceptor.bind(isa, factory);
 	}
 }

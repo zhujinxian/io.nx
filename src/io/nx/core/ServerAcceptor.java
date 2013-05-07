@@ -27,8 +27,8 @@ public class ServerAcceptor implements Runnable {
 	private List<Processor> processors;
 	private ConcurrentHashMap<SelectionKey, ChannelHandlerFactory> factoryMap = new ConcurrentHashMap<SelectionKey, ChannelHandlerFactory>();
 	
-	private BlockingQueue<Integer> unbindQ = new LinkedBlockingQueue<Integer>();
-	private BlockingQueue<Entry<Integer, ChannelHandlerFactory>> bindQ = new LinkedBlockingQueue<Entry<Integer, ChannelHandlerFactory>>();
+	private BlockingQueue<InetSocketAddress> unbindQ = new LinkedBlockingQueue<InetSocketAddress>();
+	private BlockingQueue<Entry<InetSocketAddress, ChannelHandlerFactory>> bindQ = new LinkedBlockingQueue<Entry<InetSocketAddress, ChannelHandlerFactory>>();
 	
 	private int count;
 		
@@ -41,19 +41,18 @@ public class ServerAcceptor implements Runnable {
 		this.processors = processors;
 	}
 	
-	public void bind(int port, ChannelHandlerFactory factory) {
-		Entry<Integer, ChannelHandlerFactory> entry = new AbstractMap.SimpleEntry<Integer, ChannelHandlerFactory>(port, factory);
+	public void bind(InetSocketAddress isa, ChannelHandlerFactory factory) {
+		Entry<InetSocketAddress, ChannelHandlerFactory> entry = new AbstractMap.SimpleEntry<InetSocketAddress, ChannelHandlerFactory>(isa, factory);
 		this.bindQ.add(entry);
 	}
-	public void unBind(int port) {
-		this.unbindQ.add(port);
+	public void unBind(InetSocketAddress isa) {
+		this.unbindQ.add(isa);
 	}
 	
 	
-	private void bindImp(int port, ChannelHandlerFactory factory) {
+	private void bindImp(InetSocketAddress isa, ChannelHandlerFactory factory) {
 		try {
 			ServerSocketChannel server = ServerSocketChannel.open();
-			InetSocketAddress isa = new InetSocketAddress(port);
 			server.socket().bind(isa);
 			server.configureBlocking(false);
 			SelectionKey key = server.register(this.selector, SelectionKey.OP_ACCEPT);
@@ -65,10 +64,11 @@ public class ServerAcceptor implements Runnable {
 	
 	
 	
-	private void unBindImp(int port) {
+	private void unBindImp(InetSocketAddress isa) {
 		for (SelectionKey key : factoryMap.keySet()) {
 			ServerSocketChannel server = (ServerSocketChannel)key.channel();
-			if (server.socket().getLocalPort() == port) {
+			if (server.socket().getInetAddress().equals(isa.getAddress()) 
+					&& server.socket().getLocalPort() == isa.getPort()) {
 				this.factoryMap.remove(key);
 				key.cancel();
 				try {
@@ -77,7 +77,7 @@ public class ServerAcceptor implements Runnable {
 					e.printStackTrace();
 				}
 				for (Processor pro : this.processors) {
-					pro.unBind(port);
+					pro.unBind(isa, true);
 				}
 				break;
 			}
@@ -111,17 +111,17 @@ public class ServerAcceptor implements Runnable {
 
 	private void processUbindQ() {
 		for (;;) {
-			Integer port = this.unbindQ.poll();
-			if (port == null) {
+			InetSocketAddress isa = this.unbindQ.poll();
+			if (isa == null) {
 				break;
 			}
-			this.unBindImp(port);
+			this.unBindImp(isa);
 		}
 	}
 
 	private void processBindQ() {
 		for (;;) {
-			Entry<Integer, ChannelHandlerFactory> entry = this.bindQ.poll();
+			Entry<InetSocketAddress, ChannelHandlerFactory> entry = this.bindQ.poll();
 			if (entry == null) {
 				break;
 			}

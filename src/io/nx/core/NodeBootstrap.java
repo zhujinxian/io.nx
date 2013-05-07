@@ -1,8 +1,5 @@
 package io.nx.core;
 
-import io.nx.api.ChannelHandlerFactory;
-import io.nx.api.Client;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
@@ -14,13 +11,19 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-public class ClientBootstrap implements Client {
+import io.nx.api.ChannelHandlerFactory;
+import io.nx.api.Node;
+
+public class NodeBootstrap implements Node {
 	
 	private Executor excutor;
+	private ServerAcceptor acceptor;
 	private List<Processor> processors = new ArrayList<Processor>();
 	private Map<Selector, Processor> procMap = new HashMap<Selector, Processor>();
+	
 	private int count;
-	public ClientBootstrap() {
+	
+	public NodeBootstrap() {
 		this.excutor =  Executors.newCachedThreadPool();
 		int count = Runtime.getRuntime().availableProcessors();
 		for (int i = 0; i < count*2; i++) {
@@ -28,13 +31,20 @@ public class ClientBootstrap implements Client {
 			this.processors.add(p);
 			this.procMap.put(p.getSelector(), p);
 		}
+		this.acceptor = new ServerAcceptor(this.processors);
 		boot();
 	}
-	
+		
 	private void boot() {
 		for (Processor p : this.processors) {
 			this.excutor.execute(p);
 		}
+		this.excutor.execute(this.acceptor);
+	}
+
+	@Override
+	public void bind(InetSocketAddress isa, ChannelHandlerFactory factory) {
+		this.acceptor.bind(isa, factory);
 	}
 
 	@Override
@@ -50,7 +60,19 @@ public class ClientBootstrap implements Client {
 			e.printStackTrace();
 		}  
 	}
-	
+
+	@Override
+	public void disconnect(InetSocketAddress isa) {
+		for (Processor proc : this.processors) {
+			proc.unBind(isa, false);
+		}
+	}
+
+	@Override
+	public void unBind(InetSocketAddress isa) {
+		this.acceptor.unBind(isa);
+	}
+
 	private void dispatch(SocketChannel socket, ChannelHandlerFactory factory) {
 		int num = this.processors.size();
 		int index = count % num;
@@ -59,12 +81,4 @@ public class ClientBootstrap implements Client {
 		processor.register(socket, factory.getHandler());
 		
 	}
-
-	@Override
-	public void disconnect(InetSocketAddress isa) {
-		for (Processor proc : this.processors) {
-			proc.unBind(isa, false);
-		}		
-	}
-
 }

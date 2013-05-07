@@ -4,20 +4,19 @@ import io.nx.api.ChannelHandler;
 import io.nx.api.ChannelHandlerContext;
 import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Client;
-import io.nx.core.ClientBootstrap;
+import io.nx.core.NodeBootstrap;
 import io.nx.core.extention.SimpleChannelHandler;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class EchoClient {
-	private static int n = 1;
+	private static int n = 4000;
 	Client client;
 	InetSocketAddress isa;
 	public EchoClient(String ip, int port) {
-		this.client = new ClientBootstrap();
+		this.client = new NodeBootstrap();
 		this.isa = new InetSocketAddress(ip, port);
 	}
 	
@@ -28,12 +27,11 @@ public class EchoClient {
 		
 	}
 	public static void main(String[] args) {
-		EchoClient client = new EchoClient("192.168.0.141", 7894);
+		EchoClient client = new EchoClient("192.168.0.6", 7894);
 		client.boot();
 		try {
 			System.in.read();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
