@@ -7,7 +7,6 @@ import io.nx.api.ChannelHandlerContext;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -16,8 +15,8 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -106,7 +105,7 @@ private static final int TIME_OUT = 100;
 	}
 
 	private void fulshImp(ChannelHandlerContext ctx) {
-		ctx.writeBytes(null);
+		ctx.write(null);
 	}
 
 	private void processRegQ() {
@@ -203,11 +202,8 @@ private static final int TIME_OUT = 100;
 		}
 
 		@Override
-		public void writeBytes(byte[] data) {
-			if (data != null) {
-				ByteBuffer buffer = ByteBuffer.allocate(data.length);
-				buffer.put(data);
-				buffer.flip();
+		public void write(ByteBuffer buffer) {
+			if (buffer != null) {
 				this.outQ.add(buffer);
 			}
 			this.flush();

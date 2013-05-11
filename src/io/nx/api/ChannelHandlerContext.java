@@ -11,7 +11,7 @@ public interface ChannelHandlerContext {
 	ByteBuffer getBuffer();
 	void setBufferSize(int size);
 	void read();
-	void writeBytes(byte[] data);
+	void write(ByteBuffer data);
 	void attach(Object parameter);
 	Object attachment();
 }

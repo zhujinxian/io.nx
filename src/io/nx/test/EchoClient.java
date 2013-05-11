@@ -5,14 +5,14 @@ import io.nx.api.ChannelHandlerContext;
 import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Client;
 import io.nx.core.NodeBootstrap;
-import io.nx.core.extention.SimpleChannelHandler;
+import io.nx.extention.SimpleChannelHandler;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class EchoClient {
-	private static int n = 4000;
+	private static int n = 2;
 	Client client;
 	InetSocketAddress isa;
 	public EchoClient(String ip, int port) {
@@ -27,7 +27,7 @@ public class EchoClient {
 		
 	}
 	public static void main(String[] args) {
-		EchoClient client = new EchoClient("192.168.0.6", 7894);
+		EchoClient client = new EchoClient("192.168.0.141", 7894);
 		client.boot();
 		try {
 			System.in.read();
@@ -62,13 +62,13 @@ class ClientHandler extends SimpleChannelHandler {
 			float xx = num.longValue() / (t * 1.0f) * 1000;
 			System.out.println("q/s= " + xx);
 		}
-		ctx.writeBytes("HelloServer".getBytes());
+		ctx.write(ByteBuffer.wrap("HelloServer".getBytes()));
 	}
 
 	@Override
 	public void open(ChannelHandlerContext ctx) {
 		super.open(ctx);
-		ctx.writeBytes("HelloServer".getBytes());
+		ctx.write(ByteBuffer.wrap("HelloServer".getBytes()));
 	}
 	
 	

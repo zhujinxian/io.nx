@@ -5,9 +5,10 @@ import io.nx.api.ChannelHandlerContext;
 import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Server;
 import io.nx.core.NodeBootstrap;
-import io.nx.core.extention.SimpleChannelHandler;
+import io.nx.extention.SimpleChannelHandler;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 
 public class EchoServer {
 	public static void main(String[] args) {
@@ -30,7 +31,7 @@ class EchoHandler extends SimpleChannelHandler {
 	@Override
 	public void read(ChannelHandlerContext ctx) {
 		super.read(ctx);
-		ctx.writeBytes("hello client".getBytes());
+		ctx.write(ByteBuffer.wrap("hello client".getBytes()));
 	}
 	
 }
