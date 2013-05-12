@@ -4,7 +4,6 @@ package io.nx.core;
 import io.nx.api.ChannelHandler;
 import io.nx.api.ChannelHandlerContext;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public abstract class AbstractChannelHandler implements ChannelHandler {
@@ -17,12 +16,7 @@ public abstract class AbstractChannelHandler implements ChannelHandler {
 
 	@Override
 	public void close(ChannelHandlerContext ctx) {
-		ctx.getKey().cancel();
-		try {
-			ctx.getKey().channel().close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		ctx.destroy();
 	}
 	
 	@Override
@@ -31,7 +25,9 @@ public abstract class AbstractChannelHandler implements ChannelHandler {
 	}
 
 	@Override
-	public void write(ChannelHandlerContext ctx, ByteBuffer buffer) {
-		ctx.write(buffer);
+	public void write(ChannelHandlerContext ctx, Object data) {
+		if (data instanceof ByteBuffer) {
+			ctx.write((ByteBuffer) data);
+		}
 	}
 }

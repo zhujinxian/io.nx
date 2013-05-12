@@ -1,6 +1,7 @@
 package io.nx.core;
 
 
+import io.nx.api.BufferAllocator;
 import io.nx.api.ChannelHandler;
 import io.nx.api.ChannelHandlerContext;
 
@@ -28,6 +29,7 @@ private static final int TIME_OUT = 100;
 	
 	private Selector selector;
 	private boolean stop;
+	private BufferAllocator bufferAllocator;
 	
 	private BlockingQueue<Entry<InetSocketAddress, Boolean>> unbindQ = new LinkedBlockingQueue<Entry<InetSocketAddress, Boolean>>();
 	private BlockingQueue<Entry<SocketChannel, ChannelHandler>> regQ = new LinkedBlockingQueue<Entry<SocketChannel, ChannelHandler>>();
@@ -45,6 +47,10 @@ private static final int TIME_OUT = 100;
 
 	public Selector getSelector() {
 		return selector;
+	}
+	
+	public void setBufferAllocator(BufferAllocator bufferAllocator) {
+		this.bufferAllocator = bufferAllocator;
 	}
 
 	public void register(SocketChannel socket, ChannelHandler handler) {
@@ -83,12 +89,18 @@ private static final int TIME_OUT = 100;
 					try {
 						ChannelHandlerContext ctx = this.map.get(key);
 						ChannelHandler handler = ctx.getHandler();
-						handler.read(ctx);
-					} catch(Exception e) {
+						try {
+							handler.read(ctx);
+						} catch(Exception e) {
+							e.printStackTrace();
+							handler.close(ctx);
+						}
+					} catch (Exception e) {
 						e.printStackTrace();
 						key.cancel();
 						key.channel().close();
 					}
+					
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -171,7 +183,7 @@ private static final int TIME_OUT = 100;
 		private Processor proc;
 		private ChannelHandler handler;
 		private SelectionKey key;
-		private ByteBuffer inputBuff = ByteBuffer.allocate(4096);
+		private ByteBuffer inputBuff;
 		private BlockingQueue<ByteBuffer> outQ = new LinkedBlockingQueue<ByteBuffer>();
 		
 		private Lock lock = new ReentrantLock();
@@ -186,14 +198,11 @@ private static final int TIME_OUT = 100;
 
 		@Override
 		public ByteBuffer getBuffer() {
+			this.inputBuff = this.proc.bufferAllocator.buffer(this);
 			return this.inputBuff;
 		}
 
-		@Override
-		public SelectionKey getKey() {
-			return this.key;
-		}
-
+	
 		@Override
 		public void setBufferSize(int size) {
 			ByteBuffer buff = ByteBuffer.allocate(size);
@@ -217,6 +226,12 @@ private static final int TIME_OUT = 100;
 		@Override
 		public void read() {
 			try {
+				this.getBuffer();
+				if (!this.inputBuff.hasRemaining()) {
+					System.err.println("buff: " + this.inputBuff.position()
+							+ "/" + this.inputBuff.limit());
+					System.exit(-100);
+				}
 				int count = this.getChannel().read(this.inputBuff);
 				if (count == -1) {
 					this.getHandler().close(this);
@@ -240,6 +255,12 @@ private static final int TIME_OUT = 100;
 		@Override
 		public SocketChannel getChannel() {
 			return ((SocketChannel)this.key.channel());
+		}
+		
+		@Override
+		public void releaseBuffer() {
+			this.inputBuff = null;
+			this.proc.bufferAllocator.release(this);
 		}
 		
 		
@@ -275,6 +296,19 @@ private static final int TIME_OUT = 100;
 				return true;
 			}
 			return !buffer.hasRemaining();
+		}
+
+		@Override
+		public void destroy() {
+			this.proc.map.remove(this.key);
+			this.key.cancel();
+			this.releaseBuffer();
+			try {
+				this.key.channel().close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
 		}
 
 	}

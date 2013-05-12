@@ -1,5 +1,6 @@
 package io.nx.core;
 
+import io.nx.api.BufferAllocatorFactory;
 import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Client;
 
@@ -20,6 +21,7 @@ public class ClientBootstrap implements Client {
 	private List<Processor> processors = new ArrayList<Processor>();
 	private Map<Selector, Processor> procMap = new HashMap<Selector, Processor>();
 	private int count;
+	private BufferAllocatorFactory allocatorFactory;
 	public ClientBootstrap() {
 		this.excutor =  Executors.newCachedThreadPool();
 		int count = Runtime.getRuntime().availableProcessors();
@@ -65,6 +67,17 @@ public class ClientBootstrap implements Client {
 		for (Processor proc : this.processors) {
 			proc.unBind(isa, false);
 		}		
+	}
+
+	@Override
+	public void setBufferAllocatorFactory(BufferAllocatorFactory factory) throws Exception {
+		if (this.allocatorFactory != null) {
+			throw new Exception("BufferAllocatorFactory 不能再次初始化");
+		}
+		this.allocatorFactory = factory;
+		for (Processor p : this.processors) {
+			p.setBufferAllocator(this.allocatorFactory.getBufferAllocator());
+		}
 	}
 
 }

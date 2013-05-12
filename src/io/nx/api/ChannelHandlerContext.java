@@ -1,14 +1,14 @@
 package io.nx.api;
 
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 public interface ChannelHandlerContext {
 	ChannelHandler getHandler();
-	SelectionKey getKey();
+	void destroy();
 	SocketChannel getChannel();
 	ByteBuffer getBuffer();
+	void releaseBuffer();
 	void setBufferSize(int size);
 	void read();
 	void write(ByteBuffer data);

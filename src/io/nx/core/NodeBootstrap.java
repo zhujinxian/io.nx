@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import io.nx.api.BufferAllocatorFactory;
 import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Node;
 
@@ -22,6 +23,7 @@ public class NodeBootstrap implements Node {
 	private Map<Selector, Processor> procMap = new HashMap<Selector, Processor>();
 	
 	private int count;
+	private BufferAllocatorFactory allocatorFactory;
 	
 	public NodeBootstrap() {
 		this.excutor =  Executors.newCachedThreadPool();
@@ -72,6 +74,17 @@ public class NodeBootstrap implements Node {
 	public void unBind(InetSocketAddress isa) {
 		this.acceptor.unBind(isa);
 	}
+	
+	@Override
+	public void setBufferAllocatorFactory(BufferAllocatorFactory factory) throws Exception {
+		if (this.allocatorFactory != null) {
+			throw new Exception("BufferAllocatorFactory 不能再次初始化");
+		}
+		this.allocatorFactory = factory;
+		for (Processor p : this.processors) {
+			p.setBufferAllocator(this.allocatorFactory.getBufferAllocator());
+		}
+	}
 
 	private void dispatch(SocketChannel socket, ChannelHandlerFactory factory) {
 		int num = this.processors.size();
@@ -81,4 +94,6 @@ public class NodeBootstrap implements Node {
 		processor.register(socket, factory.getHandler());
 		
 	}
+	
+	
 }
