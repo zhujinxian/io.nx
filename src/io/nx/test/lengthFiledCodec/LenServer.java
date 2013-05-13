@@ -7,7 +7,7 @@ import io.nx.api.Decoder;
 import io.nx.api.Encoder;
 import io.nx.api.Server;
 import io.nx.buffer.DefaultBufferAllocatorFactory;
-import io.nx.codec.LengthFiledCodec;
+import io.nx.codec.simple.LengthFieldFrameCodec;
 import io.nx.core.NodeBootstrap;
 import io.nx.extention.CodecHandler;
 
@@ -27,7 +27,7 @@ public class LenServer {
 }
 
 class LenHandlerFactory implements ChannelHandlerFactory {
-	private LengthFiledCodec codec = new LengthFiledCodec();
+	private LengthFieldFrameCodec codec = new LengthFieldFrameCodec();
 
 	@Override
 	public ChannelHandler getHandler() {
@@ -36,15 +36,14 @@ class LenHandlerFactory implements ChannelHandlerFactory {
 	
 }
 
-class LenHandler extends CodecHandler {
+class LenHandler extends CodecHandler<ByteBuffer, ByteBuffer> {
 
-	public LenHandler(Encoder encoder, Decoder decoder) {
+	public LenHandler(Encoder<ByteBuffer> encoder, Decoder<ByteBuffer> decoder) {
 		super(encoder, decoder);
 	}
 
 	@Override
-	public void process(ChannelHandlerContext ctx, Object data) {
-		ByteBuffer buff = (ByteBuffer)data;
+	public void process(ChannelHandlerContext ctx, ByteBuffer buff) {
 		String msg = new String(buff.array(), buff.position(), buff.remaining());
 		System.out.println(msg);
 		

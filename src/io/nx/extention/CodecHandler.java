@@ -1,19 +1,19 @@
 package io.nx.extention;
 
-import java.nio.ByteBuffer;
-import java.util.List;
-
 import io.nx.api.ChannelHandlerContext;
 import io.nx.api.Decoder;
 import io.nx.api.Encoder;
 import io.nx.core.AbstractChannelHandler;
 
-public abstract class CodecHandler extends AbstractChannelHandler {
+import java.nio.ByteBuffer;
+import java.util.List;
+
+public abstract class CodecHandler<E, D> extends AbstractChannelHandler {
 	
-	private Encoder encoder;
-	private Decoder decoder;
+	private Encoder<E> encoder;
+	private Decoder<D> decoder;
 	
-	public CodecHandler(Encoder encoder,  Decoder decoder) {
+	public CodecHandler(Encoder<E> encoder,  Decoder<D> decoder) {
 		this.encoder = encoder;
 		this.decoder = decoder;
 	}
@@ -24,7 +24,7 @@ public abstract class CodecHandler extends AbstractChannelHandler {
 		ByteBuffer buffer = ctx.getBuffer();
 		buffer.flip();
 		while (buffer.hasRemaining()) {
-			Object data = this.decoder.doDecode(buffer);
+			D data = this.decoder.doDecode(buffer);
 			if (data != null) {
 				this.process(ctx, data);
 			} else {
@@ -38,12 +38,13 @@ public abstract class CodecHandler extends AbstractChannelHandler {
 
 	@Override
 	public void write(ChannelHandlerContext ctx, Object data) {
-		List<ByteBuffer>buffs = this.encoder.doEncode(data);
+		@SuppressWarnings("unchecked")
+		List<ByteBuffer>buffs = this.encoder.doEncode((E)data);
 		for (ByteBuffer buff : buffs) {
 			super.write(ctx, buff);
 		}
 	}
 	
-	public abstract void process(ChannelHandlerContext ctx, Object data);
+	public abstract void process(ChannelHandlerContext ctx, D data);
 	
 }

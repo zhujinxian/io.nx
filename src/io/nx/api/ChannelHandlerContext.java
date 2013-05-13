@@ -9,7 +9,6 @@ public interface ChannelHandlerContext {
 	SocketChannel getChannel();
 	ByteBuffer getBuffer();
 	void releaseBuffer();
-	void setBufferSize(int size);
 	void read();
 	void write(ByteBuffer data);
 	void attach(Object parameter);

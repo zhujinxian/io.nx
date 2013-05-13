@@ -10,7 +10,6 @@ public abstract class AbstractChannelHandler implements ChannelHandler {
 		
 	@Override
 	public void open(ChannelHandlerContext ctx) {
-		// TODO Auto-generated method stub
 		
 	}
 

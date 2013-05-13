@@ -38,15 +38,6 @@ public class DefaultBufferAllocator implements BufferAllocator {
 			this.buffList.add(buff);
 		}
 	}
-
-	@Override
-	public ByteBuffer buffer(Object obj, ByteBuffer oldBuff) {
-		oldBuff.flip();
-		ByteBuffer buff = findFreeBuff(oldBuff.capacity()  * 2);
-		buff.put(oldBuff);
-		this.buffMap.put(obj, buff);
-		return buff;
-	}
 	
 	private ByteBuffer findFreeBuff() {
 		if (this.buffList.isEmpty()) {

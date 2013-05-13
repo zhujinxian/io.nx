@@ -202,14 +202,6 @@ private static final int TIME_OUT = 100;
 			return this.inputBuff;
 		}
 
-	
-		@Override
-		public void setBufferSize(int size) {
-			ByteBuffer buff = ByteBuffer.allocate(size);
-			buff.put(this.inputBuff);
-			this.inputBuff = buff;
-		}
-
 		@Override
 		public void write(ByteBuffer buffer) {
 			if (buffer != null) {
