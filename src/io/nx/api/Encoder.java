@@ -4,5 +4,5 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 public interface Encoder<T> {
-	List<ByteBuffer> doEncode(T data);
+	List<ByteBuffer> doEncode(ChannelHandlerContext ctx, T data);
 }

@@ -14,8 +14,11 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
@@ -186,6 +189,8 @@ private static final int TIME_OUT = 100;
 		private ByteBuffer inputBuff;
 		private BlockingQueue<ByteBuffer> outQ = new LinkedBlockingQueue<ByteBuffer>();
 		
+		private HashMap<Object, Object> attMap = new HashMap<Object, Object>();;
+		
 		private Lock lock = new ReentrantLock();
 		
 		
@@ -233,17 +238,7 @@ private static final int TIME_OUT = 100;
 				this.getHandler().close(this);
 			}	
 		}
-		
-		@Override
-		public void attach(Object parameter) {
-			this.key.attach(parameter);
-		}
-
-		@Override
-		public Object attachment() {
-			return this.key.attachment();
-		}
-		
+				
 		@Override
 		public SocketChannel getChannel() {
 			return ((SocketChannel)this.key.channel());
@@ -301,6 +296,16 @@ private static final int TIME_OUT = 100;
 				e.printStackTrace();
 			}
 			
+		}
+
+		@Override
+		public void setAttribute(Object k, Object v) {
+			this.attMap.put(k, v);
+		}
+
+		@Override
+		public Object getAttribute(Object k) {
+			return this.attMap.get(k);
 		}
 
 	}

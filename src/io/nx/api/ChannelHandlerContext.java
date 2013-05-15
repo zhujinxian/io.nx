@@ -11,6 +11,6 @@ public interface ChannelHandlerContext {
 	void releaseBuffer();
 	void read();
 	void write(ByteBuffer data);
-	void attach(Object parameter);
-	Object attachment();
+	void setAttribute(Object k, Object v);
+	Object getAttribute(Object k);
 }

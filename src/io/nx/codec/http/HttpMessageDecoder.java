@@ -3,6 +3,7 @@ package io.nx.codec.http;
 import java.nio.ByteBuffer;
 
 
+import io.nx.api.ChannelHandlerContext;
 import io.nx.api.Decoder;
 
 public class HttpMessageDecoder implements Decoder<HttpMessage> {
@@ -20,7 +21,8 @@ public class HttpMessageDecoder implements Decoder<HttpMessage> {
 	
 
 	@Override
-	public HttpMessage doDecode(ByteBuffer buffer) {
+	public HttpMessage doDecode(ChannelHandlerContext ctx) {
+		ByteBuffer buffer = ctx.getBuffer();
 		switch (this.state) {
 		case READ_INITIAL:{
 			String initLine = HttpUtil.readLine(buffer);

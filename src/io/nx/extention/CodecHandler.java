@@ -24,7 +24,7 @@ public abstract class CodecHandler<E, D> extends AbstractChannelHandler {
 		ByteBuffer buffer = ctx.getBuffer();
 		buffer.flip();
 		while (buffer.hasRemaining()) {
-			D data = this.decoder.doDecode(buffer);
+			D data = this.decoder.doDecode(ctx);
 			if (data != null) {
 				this.process(ctx, data);
 			} else {
@@ -39,7 +39,7 @@ public abstract class CodecHandler<E, D> extends AbstractChannelHandler {
 	@Override
 	public void write(ChannelHandlerContext ctx, Object data) {
 		@SuppressWarnings("unchecked")
-		List<ByteBuffer>buffs = this.encoder.doEncode((E)data);
+		List<ByteBuffer>buffs = this.encoder.doEncode(ctx, (E)data);
 		for (ByteBuffer buff : buffs) {
 			super.write(ctx, buff);
 		}

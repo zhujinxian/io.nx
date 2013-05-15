@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.nx.api.BufferAllocator;
+import io.nx.api.ChannelHandlerContext;
 import io.nx.api.Decoder;
 import io.nx.api.Encoder;
 
@@ -13,7 +14,8 @@ public class LengthFieldFrameCodec implements Encoder<ByteBuffer>, Decoder<ByteB
 	private BufferAllocator buffPool;
 
 	@Override
-	public ByteBuffer doDecode(ByteBuffer buffer) {
+	public ByteBuffer doDecode(ChannelHandlerContext ctx) {
+		ByteBuffer buffer = ctx.getBuffer();
 		buffer.mark();
 		if (buffer.remaining() >= 2) {
 			int len = buffer.getShort() & 0xffff;
@@ -29,7 +31,7 @@ public class LengthFieldFrameCodec implements Encoder<ByteBuffer>, Decoder<ByteB
 	}
 
 	@Override
-	public List<ByteBuffer> doEncode(ByteBuffer data) {
+	public List<ByteBuffer> doEncode(ChannelHandlerContext ctx, ByteBuffer data) {
 		ByteBuffer buffer = (ByteBuffer) data;
 		List<ByteBuffer> buffList = new ArrayList<ByteBuffer>();
 		ByteBuffer buff = this.buffPool.buffer(this, 2);
