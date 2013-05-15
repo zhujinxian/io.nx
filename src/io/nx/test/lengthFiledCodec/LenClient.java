@@ -16,7 +16,6 @@ import io.nx.extention.CodecHandler;
 
 public class LenClient {
 
-	
 	private static int n = 1;
 	Client client;
 	InetSocketAddress isa;
