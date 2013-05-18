@@ -1,0 +1,125 @@
+<project name="io.nx" default="all" basedir=".">
+
+  <property file="${basedir}/build.properties"/>
+
+  <property name="project.version" value="0.1"/>
+  <property name="project.implementation.title" value="io.nx"/>
+  <property name="project.specification.title" value="io.nx-spe"/>
+
+  <property name="global.vendor.name" value="io.nx"/>
+
+  <property name="project.structure.dist" value="${basedir}/dist"/>
+  <property name="project.structure.src" value="${basedir}/src"/>
+  <property name="project.structure.build" value="${basedir}/build"/>
+ 
+  <property name="version.java.jvm" value="1.7"/>
+
+  <property name="project.jar" value="${ant.project.name}-${project.version}.jar"/>
+
+
+  <echo message="project.version = ${project.version}"/>
+
+ 
+  <target name="clean" description="Clean build directory">
+    <echo message="common.clean"/>
+    <delete dir="${project.structure.build}"/>
+    <delete dir="${project.structure.dist}"/>
+  </target>
+
+
+  <target name="init" depends="clean" description="init">
+    <echo message="common.init"/>
+    <mkdir dir="${project.structure.dist}"/>		
+    <mkdir dir="${project.structure.build}"/>	
+    <tstamp>
+      <format property="build.timestamp" pattern="yyyy-MM-dd'T'HH:mm:ss" />
+    </tstamp>
+  </target>
+
+  <target name="compile" depends="init" description="Compile project">
+    <echo message="common.compile"/>
+    <javac
+	   srcdir="${project.structure.src}" 
+	   destdir="${project.structure.build}"
+	   debug="true" 
+	   failonerror="true"
+	   deprecation="true"
+	   target="${version.java.jvm}"
+	   />
+  </target>
+
+
+  <target name="create-manifest" depends="init">
+    <delete file="${project.structure.build}/MANIFEST.MF"/>	
+    <manifest file="${project.structure.build}/MANIFEST.MF">
+      <attribute name="Built-By" value="${user.name}"/>
+      <attribute name="Built-On" value="${os.name}"/>
+      <section name="${ant.project.name}">
+	<attribute name="Specification-Title" value="${project.specification.title}"/>
+	<attribute name="Specification-Version" value="${project.version}"/>
+	<attribute name="Specification-Vendor" value="${global.vendor.name}"/>
+	<attribute name="Implementation-Title" value="${project.implementation.title}"/>
+	<attribute name="Implementation-Version" value="${build.timestamp}"/> 
+	<attribute name="Implementation-Vendor" value="${global.vendor.name}"/>
+      </section>
+    </manifest>
+  </target>
+
+  <target name="manifest-add-main" if="project.main.class">
+    <manifest file="${project.structure.build}/MANIFEST.MF" mode="update"/>
+  </target>
+
+
+  <target name="jar" depends="compile, create-manifest, manifest-add-main">
+    <echo message="Building jar ${project.structure.dist}/${project.jar}"/>
+    <delete file="${project.structure.dist}/${project.jar}"/>
+    <jar jarfile="${project.structure.dist}/${project.jar}" 
+	 basedir="${project.structure.build}" 
+	 manifest="${project.structure.build}/MANIFEST.MF"
+	 excludes="**/*Test.class, **/*Test$*.class, *.MF"
+	 />
+  </target>
+
+  <target name="all" depends="package"/>
+
+  <target name="package" depends="jar">
+    <zip destfile="${basedir}/dist/${ant.project.name}-${project.version}.zip"
+	 basedir="${basedir}/.."
+	 includes="${ant.project.name}/**"
+	 />
+    <tar destfile="${basedir}/dist/${ant.project.name}-${project.version}.tar.gz" compression="gzip"
+	 basedir="${basedir}/.."
+	 includes="${ant.project.name}/**"
+	 />
+  </target>
+
+
+  <target name="debug-classpath" description="Pretty print classpath for debugging" >
+    <echo message="|-- compile classpath"/>
+    <echo message="|   |"/>
+    <echo message="|   |-- ${echo.path.compile}"/>
+  </target>
+
+  <target name="dp" description="Debug Print">
+    <echo message="${ant.project.name}"/>
+    <echo message="${project.structure.lib}"/>
+  </target>
+	
+	
+	<macrodef name="iterate">
+	    <attribute name="target"/>
+	    <sequential>
+	        <subant target="@{target}">
+	            <fileset dir="." 
+	                     includes="builds/*.xml"/>
+	        </subant>
+	    </sequential>
+	</macrodef>
+
+
+	<target name="sub"  description="Build all sub projects">
+	    <iterate target="local-jar"/>
+	</target>
+	
+
+</project>
