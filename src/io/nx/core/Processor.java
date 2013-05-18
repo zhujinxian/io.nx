@@ -205,7 +205,11 @@ private static final int TIME_OUT = 100;
 		public ByteBuffer getBuffer() {
 			this.inputBuff = this.proc.bufferAllocator.buffer(this);
 			if (!this.inputBuff.hasRemaining()) {
-				this.inputBuff = this.proc.bufferAllocator.buffer(this, this.inputBuff.capacity());
+				try {
+					this.inputBuff = this.proc.bufferAllocator.buffer(this, this.inputBuff.capacity()*2);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 			return this.inputBuff;
 		}
@@ -228,15 +232,13 @@ private static final int TIME_OUT = 100;
 			try {
 				this.getBuffer();
 				if (!this.inputBuff.hasRemaining()) {
-					System.err.println("buff: " + this.inputBuff.position()
-							+ "/" + this.inputBuff.limit());
-					System.exit(-100);
+					throw new Exception("too long data achieve");
 				}
 				int count = this.getChannel().read(this.inputBuff);
 				if (count == -1) {
 					this.getHandler().close(this);
 				}
-			} catch (IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 				this.getHandler().close(this);
 			}	

@@ -66,9 +66,9 @@ public class DefaultBufferAllocator implements BufferAllocator {
 	}
 
 	@Override
-	public ByteBuffer buffer(Object obj, int size) throws Exception {
+	public ByteBuffer buffer(Object obj, int size) {
 		if (size > this.maxSize) {
-			throw new Exception("allocate buffer maxsize is  " + this.maxSize);
+			size = this.maxSize;
 		}
 		ByteBuffer oldBuff = this.buffMap.get(obj);
 		ByteBuffer newBuff = findFreeBuff(size);
