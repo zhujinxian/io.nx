@@ -10,11 +10,11 @@ import java.util.Map;
 
 public class DefaultBufferAllocator implements BufferAllocator {
 	private Map<Object, ByteBuffer> buffMap = new HashMap<Object, ByteBuffer>();
-	private List<ByteBuffer> buffList= new ArrayList<ByteBuffer>();
-	
+	private List<ByteBuffer> buffList = new ArrayList<ByteBuffer>();
+
 	private int defaultSize = 256;
-	private int maxSize = 64*1024;
-	
+	private int maxSize = 64 * 1024;
+
 	public DefaultBufferAllocator(int defaultBuffSzie) {
 		this.defaultSize = defaultBuffSzie;
 	}
@@ -37,15 +37,15 @@ public class DefaultBufferAllocator implements BufferAllocator {
 			this.buffList.add(buff);
 		}
 	}
-	
+
 	private ByteBuffer findFreeBuff() {
 		if (this.buffList.isEmpty()) {
 			produceOneBuffer();
-		} 
+		}
 		return this.buffList.remove(0);
-		
+
 	}
-	
+
 	private ByteBuffer findFreeBuff(int size) {
 		for (int i = 0, num = this.buffList.size(); i < num; i++) {
 			if (this.buffList.get(i).capacity() >= size) {
@@ -54,13 +54,13 @@ public class DefaultBufferAllocator implements BufferAllocator {
 		}
 		produceOneBuffer(size);
 		return this.buffList.remove(this.buffList.size() - 1);
-		
+
 	}
-	
+
 	private void produceOneBuffer() {
 		this.buffList.add(ByteBuffer.allocate(defaultSize));
 	}
-	
+
 	private void produceOneBuffer(int size) {
 		this.buffList.add(ByteBuffer.allocate(size));
 	}

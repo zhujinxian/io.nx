@@ -1,6 +1,5 @@
 package io.nx.core;
 
-
 import io.nx.api.ChannelHandlerFactory;
 
 import java.io.IOException;
@@ -21,17 +20,17 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class ServerAcceptor implements Runnable {
 
 	private static final int TIME_OUT = 100;
-	
+
 	private boolean stop;
 	private Selector selector;
 	private List<Processor> processors;
 	private ConcurrentHashMap<SelectionKey, ChannelHandlerFactory> factoryMap = new ConcurrentHashMap<SelectionKey, ChannelHandlerFactory>();
-	
+
 	private BlockingQueue<InetSocketAddress> unbindQ = new LinkedBlockingQueue<InetSocketAddress>();
 	private BlockingQueue<Entry<InetSocketAddress, ChannelHandlerFactory>> bindQ = new LinkedBlockingQueue<Entry<InetSocketAddress, ChannelHandlerFactory>>();
-	
+
 	private int count;
-		
+
 	public ServerAcceptor(List<Processor> processors) {
 		try {
 			this.selector = Selector.open();
@@ -40,34 +39,34 @@ public class ServerAcceptor implements Runnable {
 		}
 		this.processors = processors;
 	}
-	
+
 	public void bind(InetSocketAddress isa, ChannelHandlerFactory factory) {
-		Entry<InetSocketAddress, ChannelHandlerFactory> entry = new AbstractMap.SimpleEntry<InetSocketAddress, ChannelHandlerFactory>(isa, factory);
+		Entry<InetSocketAddress, ChannelHandlerFactory> entry = new AbstractMap.SimpleEntry<InetSocketAddress, ChannelHandlerFactory>(
+				isa, factory);
 		this.bindQ.add(entry);
 	}
+
 	public void unBind(InetSocketAddress isa) {
 		this.unbindQ.add(isa);
 	}
-	
-	
+
 	private void bindImp(InetSocketAddress isa, ChannelHandlerFactory factory) {
 		try {
 			ServerSocketChannel server = ServerSocketChannel.open();
 			server.socket().bind(isa);
 			server.configureBlocking(false);
-			SelectionKey key = server.register(this.selector, SelectionKey.OP_ACCEPT);
+			SelectionKey key = server.register(this.selector,
+					SelectionKey.OP_ACCEPT);
 			this.factoryMap.put(key, factory);
-		}catch(Exception e){
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
-	
-	
+
 	private void unBindImp(InetSocketAddress isa) {
 		for (SelectionKey key : factoryMap.keySet()) {
-			ServerSocketChannel server = (ServerSocketChannel)key.channel();
-			if (server.socket().getInetAddress().equals(isa.getAddress()) 
+			ServerSocketChannel server = (ServerSocketChannel) key.channel();
+			if (server.socket().getInetAddress().equals(isa.getAddress())
 					&& server.socket().getLocalPort() == isa.getPort()) {
 				this.factoryMap.remove(key);
 				key.cancel();
@@ -83,8 +82,7 @@ public class ServerAcceptor implements Runnable {
 			}
 		}
 	}
-	
-	
+
 	@Override
 	public void run() {
 		while (!stop) {
@@ -108,7 +106,6 @@ public class ServerAcceptor implements Runnable {
 		}
 	}
 
-
 	private void processUbindQ() {
 		for (;;) {
 			InetSocketAddress isa = this.unbindQ.poll();
@@ -121,7 +118,8 @@ public class ServerAcceptor implements Runnable {
 
 	private void processBindQ() {
 		for (;;) {
-			Entry<InetSocketAddress, ChannelHandlerFactory> entry = this.bindQ.poll();
+			Entry<InetSocketAddress, ChannelHandlerFactory> entry = this.bindQ
+					.poll();
 			if (entry == null) {
 				break;
 			}
@@ -134,19 +132,19 @@ public class ServerAcceptor implements Runnable {
 		if (factory == null) {
 			return;
 		}
-		try{
-			ServerSocketChannel server = (ServerSocketChannel)key.channel();
+		try {
+			ServerSocketChannel server = (ServerSocketChannel) key.channel();
 			SocketChannel socket = (SocketChannel) server.accept();
-			if(socket == null){
+			if (socket == null) {
 				return;
 			}
 			socket.configureBlocking(false);
-			if(!socket.finishConnect()){
+			if (!socket.finishConnect()) {
 				socket.close();
 				return;
 			}
 			dispatch(socket, factory);
-		}catch(Exception e){
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -157,7 +155,7 @@ public class ServerAcceptor implements Runnable {
 		count++;
 		Processor processor = this.processors.get(index);
 		processor.register(socket, factory.getHandler());
-		
+
 	}
 
 }

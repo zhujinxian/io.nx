@@ -9,11 +9,11 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 public abstract class CodecHandler<E, D> extends AbstractChannelHandler {
-	
+
 	private Encoder<E> encoder;
 	private Decoder<D> decoder;
-	
-	public CodecHandler(Encoder<E> encoder,  Decoder<D> decoder) {
+
+	public CodecHandler(Encoder<E> encoder, Decoder<D> decoder) {
 		this.encoder = encoder;
 		this.decoder = decoder;
 	}
@@ -31,7 +31,7 @@ public abstract class CodecHandler<E, D> extends AbstractChannelHandler {
 				buffer.compact();
 				return;
 			}
-			
+
 		}
 		ctx.releaseBuffer();
 	}
@@ -39,12 +39,12 @@ public abstract class CodecHandler<E, D> extends AbstractChannelHandler {
 	@Override
 	public void write(ChannelHandlerContext ctx, Object data) {
 		@SuppressWarnings("unchecked")
-		List<ByteBuffer>buffs = this.encoder.doEncode(ctx, (E)data);
+		List<ByteBuffer> buffs = this.encoder.doEncode(ctx, (E) data);
 		for (ByteBuffer buff : buffs) {
 			super.write(ctx, buff);
 		}
 	}
-	
+
 	public abstract void process(ChannelHandlerContext ctx, D data);
-	
+
 }

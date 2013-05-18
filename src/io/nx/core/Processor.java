@@ -1,6 +1,5 @@
 package io.nx.core;
 
-
 import io.nx.api.BufferAllocator;
 import io.nx.api.ChannelHandler;
 import io.nx.api.ChannelHandlerContext;
@@ -28,18 +27,18 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Processor implements Runnable {
-private static final int TIME_OUT = 100;
-	
+	private static final int TIME_OUT = 100;
+
 	private Selector selector;
 	private boolean stop;
 	private BufferAllocator bufferAllocator;
-	
+
 	private BlockingQueue<Entry<InetSocketAddress, Boolean>> unbindQ = new LinkedBlockingQueue<Entry<InetSocketAddress, Boolean>>();
 	private BlockingQueue<Entry<SocketChannel, ChannelHandler>> regQ = new LinkedBlockingQueue<Entry<SocketChannel, ChannelHandler>>();
 	private BlockingQueue<ChannelHandlerContext> flushQ = new LinkedBlockingQueue<ChannelHandlerContext>();
-	
+
 	private ConcurrentHashMap<SelectionKey, ChannelHandlerContext> map = new ConcurrentHashMap<SelectionKey, ChannelHandlerContext>();
-	
+
 	public Processor() {
 		try {
 			this.selector = Selector.open();
@@ -51,18 +50,20 @@ private static final int TIME_OUT = 100;
 	public Selector getSelector() {
 		return selector;
 	}
-	
+
 	public void setBufferAllocator(BufferAllocator bufferAllocator) {
 		this.bufferAllocator = bufferAllocator;
 	}
 
 	public void register(SocketChannel socket, ChannelHandler handler) {
-		Entry<SocketChannel, ChannelHandler> entry = new AbstractMap.SimpleEntry<SocketChannel, ChannelHandler>(socket, handler);
+		Entry<SocketChannel, ChannelHandler> entry = new AbstractMap.SimpleEntry<SocketChannel, ChannelHandler>(
+				socket, handler);
 		this.regQ.add(entry);
 	}
-	
+
 	public void unBind(InetSocketAddress isa, boolean isLocal) {
-		Entry<InetSocketAddress, Boolean> entry = new AbstractMap.SimpleEntry<InetSocketAddress, Boolean>(isa, isLocal);
+		Entry<InetSocketAddress, Boolean> entry = new AbstractMap.SimpleEntry<InetSocketAddress, Boolean>(
+				isa, isLocal);
 		this.unbindQ.add(entry);
 	}
 
@@ -94,7 +95,7 @@ private static final int TIME_OUT = 100;
 						ChannelHandler handler = ctx.getHandler();
 						try {
 							handler.read(ctx);
-						} catch(Exception e) {
+						} catch (Exception e) {
 							e.printStackTrace();
 							handler.close(ctx);
 						}
@@ -103,7 +104,7 @@ private static final int TIME_OUT = 100;
 						key.cancel();
 						key.channel().close();
 					}
-					
+
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -132,17 +133,19 @@ private static final int TIME_OUT = 100;
 			registerImp(entry);
 		}
 	}
-	
+
 	private void registerImp(Entry<SocketChannel, ChannelHandler> entry) {
 		SocketChannel socket = entry.getKey();
 		ChannelHandler handler = entry.getValue();
-		try{
+		try {
 			socket.configureBlocking(false);
-			SelectionKey key = socket.register(this.selector, SelectionKey.OP_READ);
-			ChannelHandlerContext ctx = new DefaultChannelHandlerContext(key, handler);
+			SelectionKey key = socket.register(this.selector,
+					SelectionKey.OP_READ);
+			ChannelHandlerContext ctx = new DefaultChannelHandlerContext(key,
+					handler);
 			handler.open(ctx);
 			this.map.put(key, ctx);
-		}catch(Exception e){
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -154,12 +157,12 @@ private static final int TIME_OUT = 100;
 				break;
 			}
 			this.unBindImp(entry.getKey(), entry.getValue());
-		}		
+		}
 	}
 
 	private void unBindImp(InetSocketAddress isa, boolean isLocal) {
 		for (SelectionKey key : this.selector.keys()) {
-			SocketChannel soc = (SocketChannel)key.channel();
+			SocketChannel soc = (SocketChannel) key.channel();
 			InetAddress ia = null;
 			int port = 0;
 			if (isLocal) {
@@ -177,25 +180,23 @@ private static final int TIME_OUT = 100;
 					e.printStackTrace();
 				}
 			}
-		}		
+		}
 	}
-	
-	
+
 	private class DefaultChannelHandlerContext implements ChannelHandlerContext {
-		
+
 		private Processor proc;
 		private ChannelHandler handler;
 		private SelectionKey key;
 		private ByteBuffer inputBuff;
 		private BlockingQueue<ByteBuffer> outQ = new LinkedBlockingQueue<ByteBuffer>();
-		
-		private HashMap<Object, Object> attMap = new HashMap<Object, Object>();;
-		
-		private Lock lock = new ReentrantLock();
-		
-		
 
-		public DefaultChannelHandlerContext(SelectionKey key, ChannelHandler handler) {
+		private HashMap<Object, Object> attMap = new HashMap<Object, Object>();;
+
+		private Lock lock = new ReentrantLock();
+
+		public DefaultChannelHandlerContext(SelectionKey key,
+				ChannelHandler handler) {
 			this.handler = handler;
 			this.key = key;
 			this.proc = Processor.this;
@@ -206,7 +207,8 @@ private static final int TIME_OUT = 100;
 			this.inputBuff = this.proc.bufferAllocator.buffer(this);
 			if (!this.inputBuff.hasRemaining()) {
 				try {
-					this.inputBuff = this.proc.bufferAllocator.buffer(this, this.inputBuff.capacity()*2);
+					this.inputBuff = this.proc.bufferAllocator.buffer(this,
+							this.inputBuff.capacity() * 2);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -241,21 +243,20 @@ private static final int TIME_OUT = 100;
 			} catch (Exception e) {
 				e.printStackTrace();
 				this.getHandler().close(this);
-			}	
+			}
 		}
-				
+
 		@Override
 		public SocketChannel getChannel() {
-			return ((SocketChannel)this.key.channel());
+			return ((SocketChannel) this.key.channel());
 		}
-		
+
 		@Override
 		public void releaseBuffer() {
 			this.inputBuff = null;
 			this.proc.bufferAllocator.release(this);
 		}
-		
-		
+
 		private void flush() {
 			if (lock.tryLock()) {
 				try {
@@ -273,12 +274,12 @@ private static final int TIME_OUT = 100;
 				} finally {
 					lock.unlock();
 				}
-				
+
 			} else {
 				this.proc.flush(this);
 			}
 		}
-		
+
 		private boolean write0(ByteBuffer buffer) {
 			try {
 				this.getChannel().write(buffer);
@@ -300,7 +301,7 @@ private static final int TIME_OUT = 100;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
+
 		}
 
 		@Override

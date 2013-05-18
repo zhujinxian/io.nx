@@ -16,18 +16,21 @@ public class EchoClient {
 	private static int n = 800;
 	Client client;
 	InetSocketAddress isa;
+
 	public EchoClient(String ip, int port) throws Exception {
 		this.client = new NodeBootstrap();
-		this.client.setBufferAllocatorFactory(new DefaultBufferAllocatorFactory(20));
+		this.client
+				.setBufferAllocatorFactory(new DefaultBufferAllocatorFactory(20));
 		this.isa = new InetSocketAddress(ip, port);
 	}
-	
+
 	void boot() {
 		for (int i = 0; i < n; i++) {
-			 client.connect(this.isa, new ClientHandlerFactory());
+			client.connect(this.isa, new ClientHandlerFactory());
 		}
-		
+
 	}
+
 	public static void main(String[] args) throws Exception {
 		EchoClient client = new EchoClient("127.0.0.1", 7894);
 		client.boot();
@@ -45,14 +48,14 @@ class ClientHandlerFactory implements ChannelHandlerFactory {
 	public ChannelHandler getHandler() {
 		return new ClientHandler();
 	}
-	
+
 }
 
 class ClientHandler extends SimpleChannelHandler {
-	
+
 	static AtomicLong num = new AtomicLong(0);
 	static AtomicLong time = new AtomicLong(System.currentTimeMillis());
-	
+
 	@Override
 	public void read(ChannelHandlerContext ctx) {
 		super.read(ctx);
@@ -73,8 +76,5 @@ class ClientHandler extends SimpleChannelHandler {
 		super.open(ctx);
 		ctx.write(ByteBuffer.wrap("Hello client ".getBytes()));
 	}
-	
-	
-	
-}
 
+}

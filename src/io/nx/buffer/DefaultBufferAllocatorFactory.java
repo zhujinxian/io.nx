@@ -5,7 +5,7 @@ import io.nx.api.BufferAllocatorFactory;
 
 public class DefaultBufferAllocatorFactory implements BufferAllocatorFactory {
 	private int defaultBuffSzie;
-	
+
 	public DefaultBufferAllocatorFactory(int defaultBuffSzie) {
 		this.defaultBuffSzie = defaultBuffSzie;
 	}

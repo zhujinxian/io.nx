@@ -16,23 +16,24 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 public class ClientBootstrap implements Client {
-	
+
 	private Executor excutor;
 	private List<Processor> processors = new ArrayList<Processor>();
 	private Map<Selector, Processor> procMap = new HashMap<Selector, Processor>();
 	private int count;
 	private BufferAllocatorFactory allocatorFactory;
+
 	public ClientBootstrap() {
-		this.excutor =  Executors.newCachedThreadPool();
+		this.excutor = Executors.newCachedThreadPool();
 		int count = Runtime.getRuntime().availableProcessors();
-		for (int i = 0; i < count*2; i++) {
+		for (int i = 0; i < count * 2; i++) {
 			Processor p = new Processor();
 			this.processors.add(p);
 			this.procMap.put(p.getSelector(), p);
 		}
 		boot();
 	}
-	
+
 	private void boot() {
 		for (Processor p : this.processors) {
 			this.excutor.execute(p);
@@ -50,29 +51,30 @@ public class ClientBootstrap implements Client {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-		}  
+		}
 	}
-	
+
 	private void dispatch(SocketChannel socket, ChannelHandlerFactory factory) {
 		int num = this.processors.size();
 		int index = count % num;
 		count++;
 		Processor processor = this.processors.get(index);
 		processor.register(socket, factory.getHandler());
-		
+
 	}
 
 	@Override
 	public void disconnect(InetSocketAddress isa) {
 		for (Processor proc : this.processors) {
 			proc.unBind(isa, false);
-		}		
+		}
 	}
 
 	@Override
-	public void setBufferAllocatorFactory(BufferAllocatorFactory factory) throws Exception {
+	public void setBufferAllocatorFactory(BufferAllocatorFactory factory)
+			throws Exception {
 		if (this.allocatorFactory != null) {
-			throw new Exception("BufferAllocatorFactory ²»ÄÜÔÙ´Î³õÊ¼»¯");
+			throw new Exception("BufferAllocatorFactory ï¿½ï¿½ï¿½ï¿½ï¿½Ù´Î³ï¿½Ê¼ï¿½ï¿½");
 		}
 		this.allocatorFactory = factory;
 		for (Processor p : this.processors) {

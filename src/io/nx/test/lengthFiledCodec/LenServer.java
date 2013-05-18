@@ -14,10 +14,8 @@ import io.nx.extention.CodecHandler;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-
 public class LenServer {
 
-	
 	public static void main(String[] args) throws Exception {
 		Server server = new NodeBootstrap();
 		server.setBufferAllocatorFactory(new DefaultBufferAllocatorFactory(256));
@@ -33,7 +31,7 @@ class LenHandlerFactory implements ChannelHandlerFactory {
 	public ChannelHandler getHandler() {
 		return new LenHandler(codec, codec);
 	}
-	
+
 }
 
 class LenHandler extends CodecHandler<ByteBuffer, ByteBuffer> {
@@ -46,7 +44,7 @@ class LenHandler extends CodecHandler<ByteBuffer, ByteBuffer> {
 	public void process(ChannelHandlerContext ctx, ByteBuffer buff) {
 		String msg = new String(buff.array(), buff.position(), buff.remaining());
 		System.out.println(msg);
-		
+
 	}
-	
+
 }

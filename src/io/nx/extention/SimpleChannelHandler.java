@@ -14,6 +14,7 @@ public class SimpleChannelHandler extends AbstractChannelHandler {
 	public void read(ChannelHandlerContext ctx) {
 		super.read(ctx);
 		ctx.getBuffer().flip();
-//		System.out.println(new String(ctx.getBuffer().array(), 0, ctx.getBuffer().remaining()));
+		// System.out.println(new String(ctx.getBuffer().array(), 0,
+		// ctx.getBuffer().remaining()));
 	}
 }

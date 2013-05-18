@@ -1,4 +1,4 @@
 package io.nx.api;
 
-public interface Node extends Server, Client{
+public interface Node extends Server, Client {
 }

@@ -10,13 +10,13 @@ import io.nx.api.Encoder;
 
 public class LineFieldFrameCodec implements Decoder<String>, Encoder<String> {
 	public static final String CRLF = "\r\n";
-	public static final byte CR = (byte)'\r';
-	public static final byte LF = (byte)'\n';
-	
+	public static final byte CR = (byte) '\r';
+	public static final byte LF = (byte) '\n';
+
 	@Override
 	public List<ByteBuffer> doEncode(ChannelHandlerContext ctx, String data) {
 		List<ByteBuffer> buffs = new ArrayList<ByteBuffer>(1);
-		buffs.add( ByteBuffer.wrap((data + CRLF).getBytes()));
+		buffs.add(ByteBuffer.wrap((data + CRLF).getBytes()));
 		return buffs;
 	}
 

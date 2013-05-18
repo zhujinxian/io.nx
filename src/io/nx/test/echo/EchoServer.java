@@ -14,7 +14,8 @@ import java.nio.ByteBuffer;
 public class EchoServer {
 	public static void main(String[] args) throws Exception {
 		Server server = new NodeBootstrap();
-		server.setBufferAllocatorFactory(new DefaultBufferAllocatorFactory(102400));
+		server.setBufferAllocatorFactory(new DefaultBufferAllocatorFactory(
+				102400));
 		server.bind(new InetSocketAddress(7894), new EchoHandlerFactory());
 	}
 }
@@ -25,19 +26,17 @@ class EchoHandlerFactory implements ChannelHandlerFactory {
 	public ChannelHandler getHandler() {
 		return new EchoHandler();
 	}
-	
+
 }
 
 class EchoHandler extends SimpleChannelHandler {
-	
+
 	@Override
 	public void read(ChannelHandlerContext ctx) {
 		super.read(ctx);
 		ctx.releaseBuffer();
-		
+
 		this.write(ctx, ByteBuffer.wrap("hello client".getBytes()));
 	}
-	
+
 }
-
-

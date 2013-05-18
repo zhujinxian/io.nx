@@ -16,19 +16,19 @@ import io.nx.api.ChannelHandlerFactory;
 import io.nx.api.Node;
 
 public class NodeBootstrap implements Node {
-	
+
 	private Executor excutor;
 	private ServerAcceptor acceptor;
 	private List<Processor> processors = new ArrayList<Processor>();
 	private Map<Selector, Processor> procMap = new HashMap<Selector, Processor>();
-	
+
 	private int count;
 	private BufferAllocatorFactory allocatorFactory;
-	
+
 	public NodeBootstrap() {
-		this.excutor =  Executors.newCachedThreadPool();
+		this.excutor = Executors.newCachedThreadPool();
 		int count = Runtime.getRuntime().availableProcessors();
-		for (int i = 0; i < count*2; i++) {
+		for (int i = 0; i < count * 2; i++) {
 			Processor p = new Processor();
 			this.processors.add(p);
 			this.procMap.put(p.getSelector(), p);
@@ -36,7 +36,7 @@ public class NodeBootstrap implements Node {
 		this.acceptor = new ServerAcceptor(this.processors);
 		boot();
 	}
-		
+
 	private void boot() {
 		for (Processor p : this.processors) {
 			this.excutor.execute(p);
@@ -60,7 +60,7 @@ public class NodeBootstrap implements Node {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-		}  
+		}
 	}
 
 	@Override
@@ -74,11 +74,12 @@ public class NodeBootstrap implements Node {
 	public void unBind(InetSocketAddress isa) {
 		this.acceptor.unBind(isa);
 	}
-	
+
 	@Override
-	public void setBufferAllocatorFactory(BufferAllocatorFactory factory) throws Exception {
+	public void setBufferAllocatorFactory(BufferAllocatorFactory factory)
+			throws Exception {
 		if (this.allocatorFactory != null) {
-			throw new Exception("BufferAllocatorFactory ²»ÄÜÔÙ´Î³õÊ¼»¯");
+			throw new Exception("BufferAllocatorFactory ï¿½ï¿½ï¿½ï¿½ï¿½Ù´Î³ï¿½Ê¼ï¿½ï¿½");
 		}
 		this.allocatorFactory = factory;
 		for (Processor p : this.processors) {
@@ -92,8 +93,7 @@ public class NodeBootstrap implements Node {
 		count++;
 		Processor processor = this.processors.get(index);
 		processor.register(socket, factory.getHandler());
-		
+
 	}
-	
-	
+
 }

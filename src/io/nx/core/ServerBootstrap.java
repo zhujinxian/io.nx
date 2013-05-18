@@ -13,16 +13,17 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-public class ServerBootstrap implements Server{
+public class ServerBootstrap implements Server {
 	private Executor excutor;
 	private ServerAcceptor acceptor;
 	private List<Processor> processors = new ArrayList<Processor>();
 	private Map<Selector, Processor> procMap = new HashMap<Selector, Processor>();
 	private BufferAllocatorFactory allocatorFactory;
+
 	public ServerBootstrap() {
-		this.excutor =  Executors.newCachedThreadPool();
+		this.excutor = Executors.newCachedThreadPool();
 		int count = Runtime.getRuntime().availableProcessors();
-		for (int i = 0; i < count*2; i++) {
+		for (int i = 0; i < count * 2; i++) {
 			Processor p = new Processor();
 			this.processors.add(p);
 			this.procMap.put(p.getSelector(), p);
@@ -30,7 +31,7 @@ public class ServerBootstrap implements Server{
 		this.acceptor = new ServerAcceptor(this.processors);
 		boot();
 	}
-		
+
 	private void boot() {
 		for (Processor p : this.processors) {
 			this.excutor.execute(p);
@@ -41,7 +42,7 @@ public class ServerBootstrap implements Server{
 	@Override
 	public void unBind(InetSocketAddress isa) {
 		this.acceptor.unBind(isa);
-		
+
 	}
 
 	@Override
@@ -50,9 +51,10 @@ public class ServerBootstrap implements Server{
 	}
 
 	@Override
-	public void setBufferAllocatorFactory(BufferAllocatorFactory factory) throws Exception {
+	public void setBufferAllocatorFactory(BufferAllocatorFactory factory)
+			throws Exception {
 		if (this.allocatorFactory != null) {
-			throw new Exception("BufferAllocatorFactory ²»ÄÜÔÙ´Î³õÊ¼»¯");
+			throw new Exception("BufferAllocatorFactory ï¿½ï¿½ï¿½ï¿½ï¿½Ù´Î³ï¿½Ê¼ï¿½ï¿½");
 		}
 		this.allocatorFactory = factory;
 		for (Processor p : this.processors) {
