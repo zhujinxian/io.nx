@@ -204,6 +204,9 @@ private static final int TIME_OUT = 100;
 		@Override
 		public ByteBuffer getBuffer() {
 			this.inputBuff = this.proc.bufferAllocator.buffer(this);
+			if (!this.inputBuff.hasRemaining()) {
+				this.inputBuff = this.proc.bufferAllocator.buffer(this, this.inputBuff.capacity());
+			}
 			return this.inputBuff;
 		}
 

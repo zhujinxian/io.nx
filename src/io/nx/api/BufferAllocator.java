@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 
 public interface BufferAllocator {
 	ByteBuffer buffer(Object obj);
-	ByteBuffer buffer(Object obj, int size);
+	ByteBuffer buffer(Object obj, int size) throws Exception;
+	void setMaxBufferSize(int maxSize);
 	void release(Object obj);
 }

@@ -52,7 +52,7 @@ class ClientHandler extends SimpleChannelHandler {
 	
 	static AtomicLong num = new AtomicLong(0);
 	static AtomicLong time = new AtomicLong(System.currentTimeMillis());
-
+	
 	@Override
 	public void read(ChannelHandlerContext ctx) {
 		super.read(ctx);
@@ -65,13 +65,13 @@ class ClientHandler extends SimpleChannelHandler {
 			System.out.println("q/s= " + xx);
 		}
 		ctx.releaseBuffer();
-		this.write(ctx, ByteBuffer.wrap("HelloServer".getBytes()));
+		this.write(ctx, ByteBuffer.wrap("Hello server".getBytes()));
 	}
 
 	@Override
 	public void open(ChannelHandlerContext ctx) {
 		super.open(ctx);
-		ctx.write(ByteBuffer.wrap("HelloServer".getBytes()));
+		ctx.write(ByteBuffer.wrap("Hello client ".getBytes()));
 	}
 	
 	

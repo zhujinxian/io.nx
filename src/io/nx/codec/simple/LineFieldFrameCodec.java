@@ -38,7 +38,4 @@ public class LineFieldFrameCodec implements Decoder<String>, Encoder<String> {
 		buffer.reset();
 		return null;
 	}
-
-	
-
 }

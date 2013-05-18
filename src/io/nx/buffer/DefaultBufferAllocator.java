@@ -13,6 +13,7 @@ public class DefaultBufferAllocator implements BufferAllocator {
 	private List<ByteBuffer> buffList= new ArrayList<ByteBuffer>();
 	
 	private int defaultSize = 256;
+	private int maxSize = 64*1024;
 	
 	public DefaultBufferAllocator(int defaultBuffSzie) {
 		this.defaultSize = defaultBuffSzie;
@@ -25,8 +26,6 @@ public class DefaultBufferAllocator implements BufferAllocator {
 			buff = findFreeBuff();
 		}
 		this.buffMap.put(obj, buff);
-//		System.out.println("                                        buff empty : " + this.buffList.size()
-//				+ "  buff map: " + this.buffMap.size());
 		return buff;
 	}
 
@@ -67,8 +66,22 @@ public class DefaultBufferAllocator implements BufferAllocator {
 	}
 
 	@Override
-	public ByteBuffer buffer(Object obj, int size) {
-		return null;
+	public ByteBuffer buffer(Object obj, int size) throws Exception {
+		if (size > this.maxSize) {
+			throw new Exception("allocate buffer maxsize is  " + this.maxSize);
+		}
+		ByteBuffer oldBuff = this.buffMap.get(obj);
+		ByteBuffer newBuff = findFreeBuff(size);
+		oldBuff.flip();
+		newBuff.put(oldBuff);
+		this.release(obj);
+		this.buffMap.put(obj, newBuff);
+		return newBuff;
+	}
+
+	@Override
+	public void setMaxBufferSize(int maxSize) {
+		this.maxSize = maxSize;
 	}
 
 }

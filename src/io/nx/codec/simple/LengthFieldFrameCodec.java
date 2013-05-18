@@ -34,7 +34,12 @@ public class LengthFieldFrameCodec implements Encoder<ByteBuffer>, Decoder<ByteB
 	public List<ByteBuffer> doEncode(ChannelHandlerContext ctx, ByteBuffer data) {
 		ByteBuffer buffer = (ByteBuffer) data;
 		List<ByteBuffer> buffList = new ArrayList<ByteBuffer>();
-		ByteBuffer buff = this.buffPool.buffer(this, 2);
+		ByteBuffer buff = null;;
+		try {
+			buff = this.buffPool.buffer(this, 2);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		buff.putShort((short)buffer.remaining());
 		buffer.flip();
 		buffList.add(buff);
